@@ -68,6 +68,8 @@ function renderQueue() {
 }
 async function loadQueue() {
   try { state.list = await api("/api/bids"); } catch (e) { $("#list").innerHTML = `<div class="empty"><b>Couldn't load bids</b>${esc(e.message)}</div>`; return; }
+  const cur = state.list.find((b) => b.id === state.selected);
+  if (cur) { const bk = bucket(cur); if (state.selBucket && bk !== state.selBucket) state.view = bk; state.selBucket = bk; }
   renderQueue();
 }
 async function select(id, opts = {}) {
@@ -78,6 +80,7 @@ async function select(id, opts = {}) {
   const b = state.list.find((x) => x.id === id);
   if (!opts.keepSection) state.section = b && bucket(b) === "working" ? "agents" : "overview";
   if (b && bucket(b) !== state.view) state.view = bucket(b);
+  state.selBucket = b ? bucket(b) : null;
   renderQueue();
   await loadBid();
   if (innerWidth < 960) $("#main").scrollIntoView({ behavior: "smooth" });

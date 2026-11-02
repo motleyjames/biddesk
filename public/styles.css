@@ -48,6 +48,9 @@ a { color: var(--ask); }
 .btn.no { color: var(--no); border-color: #E3B4AF; }
 .btn.ask { color: var(--ask); border-color: #B5CBE4; }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn { white-space: nowrap; }
+[hidden] { display: none !important; }
+@media (max-width: 520px) { #logBtn { display: none; } }
 
 /* ---------- layout ---------- */
 .shell { display: grid; grid-template-columns: 340px minmax(0, 1fr); min-height: calc(100vh - 60px); }
