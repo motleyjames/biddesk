@@ -1,0 +1,19 @@
+{
+  "name": "biddesk",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "BidDesk: AI bid-request triage for an electrical contractor",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.3.0",
+    "@netlify/blobs": "^11.1.7",
+    "@netlify/functions": "^6.0.3"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "@types/node": "^26.6.6"
+  }
+}

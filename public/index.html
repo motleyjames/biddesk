@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BidDesk</title>
+<meta name="description" content="AI bid-request triage for commercial electrical contractors." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2314130f'/><path d='M18 4 8 18h7l-2 10 10-14h-7z' fill='%23f2b705'/></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg: #f4f1ea; --panel: #fffdf8; --ink: #14130f; --ink-2: #4a4740; --ink-3: #8a857a;
+  --line: #e2ddd1; --line-2: #d3ccbc; --accent: #f2b705; --accent-ink: #14130f;
+  --pursue: #1f7a4d; --pursue-bg: #e3f2e9; --decline: #b3361f; --decline-bg: #f8e4df;
+  --info: #9a6400; --info-bg: #fbefd4; --blue: #2c5aa0; --blue-bg: #e4ecf8;
+  --radius: 12px; --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 "Inter Tight", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+button { font: inherit; cursor: pointer; }
+.mono { font-family: var(--mono); }
+header.top { display: flex; align-items: center; gap: 14px; padding: 14px 24px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
+.logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 19px; letter-spacing: -0.02em; }
+.logo-mark { width: 30px; height: 30px; border-radius: 8px; background: var(--ink); display: grid; place-items: center; }
+.org { color: var(--ink-3); font-size: 13px; border-left: 1px solid var(--line); padding-left: 14px; }
+.spacer { flex: 1; }
+.btn { border: 1px solid var(--line-2); background: var(--panel); color: var(--ink); padding: 8px 14px; border-radius: 9px; font-weight: 600; font-size: 14px; }
+.btn:hover { border-color: var(--ink-3); }
+.btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+.btn.primary:hover { background: #2c2a24; }
+.btn.go { background: var(--pursue); border-color: var(--pursue); color: #fff; }
+.btn.no { background: var(--panel); border-color: var(--decline); color: var(--decline); }
+.btn.ask { background: var(--panel); border-color: var(--info); color: var(--info); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.bell { position: relative; width: 38px; height: 38px; display: grid; place-items: center; padding: 0; }
+.bell .dot { position: absolute; top: -4px; right: -4px; background: var(--decline); color: #fff; font-size: 11px; font-weight: 700; border-radius: 99px; min-width: 18px; height: 18px; display: grid; place-items: center; padding: 0 5px; }
+main { display: grid; grid-template-columns: 360px 1fr; min-height: calc(100vh - 67px); }
+aside.queue { border-right: 1px solid var(--line); background: var(--bg); overflow-y: auto; max-height: calc(100vh - 67px); position: sticky; top: 67px; }
+.queue-head { padding: 18px 20px 10px; display: flex; justify-content: space-between; align-items: baseline; }
+.queue-head h2 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); font-weight: 600; }
+.card { margin: 0 12px 8px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; transition: border-color .15s; }
+.card:hover { border-color: var(--line-2); }
+.card.active { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.card .t { font-weight: 600; font-size: 14px; line-height: 1.3; margin-bottom: 4px; }
+.card .m { font-size: 12.5px; color: var(--ink-3); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: #ece8de; color: var(--ink-2); white-space: nowrap; }
+.pill.pursue, .pill.approved { background: var(--pursue-bg); color: var(--pursue); }
+.pill.decline, .pill.declined { background: var(--decline-bg); color: var(--decline); }
+.pill.needs_info, .pill.info_requested { background: var(--info-bg); color: var(--info); }
+.pill.P1 { background: var(--ink); color: var(--accent); }
+.pill.P2 { background: #3b3830; color: #fff; }
+.pill.overdue { background: var(--decline); color: #fff; }
+.pill.working { background: var(--blue-bg); color: var(--blue); }
+.pill.working::before { content: ""; width: 6px; height: 6px; border-radius: 99px; background: currentColor; animation: pulse 1s infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.empty { padding: 40px 24px; color: var(--ink-3); text-align: center; }
+section.detail { padding: 28px 36px 60px; max-width: 1100px; width: 100%; }
+.welcome { max-width: 640px; margin: 60px auto; }
+.welcome h1 { font-size: 34px; letter-spacing: -0.03em; line-height: 1.1; margin: 0 0 12px; }
+.welcome p { color: var(--ink-2); font-size: 16px; }
+.flow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 26px 0; }
+.flow div { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font-size: 12.5px; }
+.flow b { display: block; font-size: 13px; margin-bottom: 2px; }
+.d-head { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+.d-head h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -0.02em; line-height: 1.15; }
+.d-sub { color: var(--ink-3); font-size: 14px; }
+.steps { display: flex; gap: 0; margin: 22px 0; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.step { flex: 1; padding: 10px 12px; font-size: 12.5px; color: var(--ink-3); border-right: 1px solid var(--line); position: relative; }
+.step:last-child { border-right: 0; }
+.step b { display: block; font-size: 13px; color: var(--ink-3); }
+.step.done b { color: var(--ink); }
+.step.done::after { content: "✓"; position: absolute; right: 10px; top: 10px; color: var(--pursue); font-weight: 700; }
+.step.now { background: var(--blue-bg); }
+.step.now b { color: var(--blue); }
+.step.err { background: var(--decline-bg); }
+.grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+.box { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; }
+.box h3 { margin: 0 0 12px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); font-weight: 600; }
+.verdict { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+.verdict .big { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; padding: 6px 14px; border-radius: 10px; }
+.big.pursue { background: var(--pursue-bg); color: var(--pursue); }
+.big.decline { background: var(--decline-bg); color: var(--decline); }
+.big.needs_info { background: var(--info-bg); color: var(--info); }
+.score { font-family: var(--mono); font-size: 13px; color: var(--ink-2); }
+.score b { font-size: 22px; color: var(--ink); }
+.headline { font-size: 16px; font-weight: 600; margin: 4px 0 8px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px; }
+.kv dt { color: var(--ink-3); }
+.kv dd { margin: 0; }
+.money { font-family: var(--mono); font-weight: 500; }
+.total { font-size: 30px; font-weight: 700; font-family: var(--mono); letter-spacing: -0.02em; }
+ul.clean { margin: 0; padding-left: 18px; }
+ul.clean li { margin: 4px 0; }
+.checks { display: grid; gap: 6px; }
+.check { display: grid; grid-template-columns: 70px 1fr; gap: 10px; font-size: 13.5px; padding: 8px 0; border-top: 1px solid var(--line); }
+.check:first-child { border-top: 0; }
+.res { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 3px 0; text-align: center; border-radius: 6px; height: fit-content; }
+.res.pass { background: var(--pursue-bg); color: var(--pursue); }
+.res.fail { background: var(--decline-bg); color: var(--decline); }
+.res.unknown { background: #ece8de; color: var(--ink-2); }
+.decide { margin: 16px 0; padding: 16px 20px; border: 2px solid var(--ink); border-radius: var(--radius); background: var(--panel); }
+.decide .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+.decide textarea { width: 100%; min-height: 54px; margin-top: 10px; }
+.decided { background: var(--pursue-bg); border-color: var(--pursue); }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: 26px 0 16px; overflow-x: auto; }
+.tab { border: 0; background: none; padding: 10px 14px; font-weight: 600; font-size: 14px; color: var(--ink-3); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.tab.on { color: var(--ink); border-bottom-color: var(--accent); }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); font-weight: 600; padding: 8px; border-bottom: 1px solid var(--line-2); }
+td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.n, th.n { text-align: right; font-family: var(--mono); white-space: nowrap; }
+.tot-row td { font-weight: 700; border-bottom: 0; }
+.trace { display: grid; gap: 6px; }
+.tr { display: grid; grid-template-columns: 120px 1fr; gap: 12px; font-size: 13px; padding: 8px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+.tr .who { font-weight: 600; font-size: 12px; }
+.tr .who small { display: block; color: var(--ink-3); font-weight: 400; font-family: var(--mono); font-size: 11px; }
+.tr code { font-family: var(--mono); font-size: 12px; background: #f1ede3; padding: 1px 5px; border-radius: 4px; word-break: break-word; }
+.tr.final { border-color: var(--ink); }
+.tr.error { border-color: var(--decline); background: var(--decline-bg); }
+.tr details summary { cursor: pointer; color: var(--ink-3); font-size: 12px; }
+.tr pre { white-space: pre-wrap; font-family: var(--mono); font-size: 11.5px; max-height: 220px; overflow: auto; background: #f1ede3; padding: 8px; border-radius: 6px; margin: 6px 0 0; }
+.auto { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; margin: 0 0 12px; }
+.auto b { display: block; font-size: 14px; }
+.auto span { font-size: 13.5px; color: var(--ink-2); }
+.auto time { font-size: 11.5px; color: var(--ink-3); font-family: var(--mono); }
+.verified { color: var(--pursue); font-weight: 700; }
+.unverified { color: var(--decline); font-weight: 700; }
+.quote { font-size: 12px; color: var(--ink-3); font-style: italic; }
+.email { white-space: pre-wrap; font-size: 14px; background: #f8f5ee; border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+.foot-note { color: var(--ink-3); font-size: 12px; margin-top: 30px; }
+.err-box { background: var(--decline-bg); color: var(--decline); border-radius: 10px; padding: 12px 16px; margin: 12px 0; font-size: 14px; }
+/* modal / drawer */
+.scrim { position: fixed; inset: 0; background: rgba(20,19,15,.45); display: none; z-index: 20; }
+.scrim.open { display: block; }
+.modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); width: min(720px, calc(100vw - 32px)); max-height: calc(100vh - 40px); overflow-y: auto; background: var(--panel); border-radius: 16px; padding: 24px; z-index: 21; display: none; }
+.modal.open { display: block; }
+.modal h2 { margin: 0 0 4px; font-size: 21px; letter-spacing: -0.02em; }
+.modal label { display: block; font-size: 12.5px; font-weight: 600; color: var(--ink-2); margin: 12px 0 4px; }
+input, textarea { width: 100%; font: inherit; font-size: 14px; padding: 9px 11px; border: 1px solid var(--line-2); border-radius: 9px; background: #fff; color: var(--ink); }
+textarea { min-height: 220px; resize: vertical; font-family: var(--mono); font-size: 12.5px; }
+input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--ink); }
+.samples { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; }
+.samples button { font-size: 12.5px; padding: 5px 10px; border-radius: 99px; border: 1px dashed var(--line-2); background: transparent; }
+.samples button:hover { border-color: var(--ink); }
+.drawer { position: fixed; top: 0; right: 0; height: 100vh; width: min(400px, 100vw); background: var(--panel); z-index: 21; transform: translateX(100%); transition: transform .2s; border-left: 1px solid var(--line); display: flex; flex-direction: column; }
+.drawer.open { transform: none; }
+.drawer header { padding: 16px 20px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+.drawer .list { overflow-y: auto; padding: 8px 12px; }
+.note { padding: 10px 12px; border-radius: 10px; margin-bottom: 6px; border: 1px solid var(--line); cursor: pointer; }
+.note.unread { background: #fff8e0; border-color: var(--accent); }
+.note.urgent .nt::before { content: "● "; color: var(--decline); }
+.note .nt { font-weight: 600; font-size: 13.5px; }
+.note .nb { font-size: 12.5px; color: var(--ink-2); }
+.note time { font-size: 11px; color: var(--ink-3); font-family: var(--mono); }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 14px; z-index: 30; display: none; }
+@media (max-width: 900px) {
+  main { grid-template-columns: 1fr; }
+  aside.queue { position: static; max-height: none; border-right: 0; border-bottom: 1px solid var(--line); }
+  section.detail { padding: 20px 16px 60px; }
+  .grid { grid-template-columns: 1fr; }
+  .org { display: none; }
+  header.top { padding: 12px 16px; }
+  .steps { flex-wrap: wrap; }
+  .step { min-width: 50%; border-bottom: 1px solid var(--line); }
+  .flow { grid-template-columns: 1fr 1fr; }
+  .tr { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="logo"><span class="logo-mark"><svg width="16" height="16" viewBox="0 0 32 32"><path d="M18 2 6 18h8l-2 12 12-16h-8z" fill="#f2b705"/></svg></span>BidDesk</div>
+  <div class="org">Bid-request triage · Custom Electric &amp; Communications <span title="Demo build with sample price book and criteria">(demo)</span></div>
+  <div class="spacer"></div>
+  <button class="btn bell" id="bellBtn" aria-label="Notifications"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="dot" id="bellDot" hidden>0</span></button>
+  <button class="btn primary" id="newBtn">+ New bid request</button>
+</header>
+
+<main>
+  <aside class="queue">
+    <div class="queue-head"><h2>Review queue</h2><span class="d-sub" id="queueCount"></span></div>
+    <div id="queue"><div class="empty">Loading…</div></div>
+  </aside>
+  <section class="detail" id="detail"></section>
+</main>
+
+<div class="scrim" id="scrim"></div>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <h2 id="mTitle">New bid request</h2>
+  <div class="d-sub">Paste the GC's bid invitation exactly as received. Submitting triggers the agent pipeline.</div>
+  <div class="samples" id="samples"></div>
+  <label for="fFrom">From</label><input id="fFrom" placeholder="Name <email@gc.com>" />
+  <label for="fSubj">Subject</label><input id="fSubj" placeholder="ITB: Electrical – …" />
+  <label for="fBody">Request</label><textarea id="fBody" placeholder="Paste the full email or ITB text…"></textarea>
+  <div class="err-box" id="fErr" hidden></div>
+  <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+    <button class="btn" id="cancelBtn">Cancel</button>
+    <button class="btn primary" id="submitBtn">Analyze request</button>
+  </div>
+</div>
+<div class="drawer" id="drawer">
+  <header><b>Notifications</b><button class="btn" id="closeDrawer">Close</button></header>
+  <div class="list" id="notes"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="/samples.js"></script>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const usd = (n) => n == null ? "—" : "$" + Math.round(n).toLocaleString("en-US");
+const usd2 = (n) => n == null ? "—" : "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const when = (iso) => iso ? new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+const WORKING = ["received", "intake", "estimating", "reviewing", "analyzed"];
+const DLABEL = { pursue: "Pursue", decline: "Decline", needs_info: "Needs info" };
+const HLABEL = { approved: "Approved · pursue", declined: "Declined", info_requested: "Info requested" };
+const SLABEL = { received: "Queued", intake: "Intake agent", estimating: "Estimator agent", reviewing: "Reviewer agent", analyzed: "Automation", awaiting_review: "Awaiting review", error: "Error" };
+
+let state = { list: [], selected: null, bid: null, tab: "rec", timer: null };
+
+async function api(path, opts) {
+  const r = await fetch(path, { headers: { "content-type": "application/json" }, ...opts });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || `Request failed (${r.status})`);
+  return data;
+}
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = "none", 2600); }
+
+/* ---------- queue ---------- */
+async function loadQueue() {
+  try { state.list = await api("/api/bids"); } catch (e) { $("#queue").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  $("#queueCount").textContent = state.list.length ? `${state.list.length} request${state.list.length > 1 ? "s" : ""}` : "";
+  if (!state.list.length) { $("#queue").innerHTML = `<div class="empty">No bid requests yet.<br/>Click <b>New bid request</b> to try one.</div>`; return; }
+  $("#queue").innerHTML = state.list.map((b) => {
+    const chips = [];
+    if (WORKING.includes(b.status)) chips.push(`<span class="pill working">${esc(SLABEL[b.status])}</span>`);
+    if (b.status === "error") chips.push(`<span class="pill decline">Error</span>`);
+    if (b.priority && !b.humanDecision) chips.push(`<span class="pill ${b.priority}">${b.priority}</span>`);
+    if (b.overdue && !b.humanDecision) chips.push(`<span class="pill overdue">Overdue</span>`);
+    if (b.humanDecision) chips.push(`<span class="pill ${b.humanDecision}">${esc(HLABEL[b.humanDecision])}</span>`);
+    else if (b.decision) chips.push(`<span class="pill ${b.decision}">AI: ${esc(DLABEL[b.decision])}</span>`);
+    return `<div class="card ${state.selected === b.id ? "active" : ""}" data-id="${esc(b.id)}">
+      <div class="t">${esc(b.project || b.subject)}</div>
+      <div class="m">${chips.join("")}<span>${esc([b.gc, b.town].filter(Boolean).join(" · ") || b.from)}</span>${b.total ? `<span class="mono">${usd(b.total)}</span>` : ""}</div>
+    </div>`;
+  }).join("");
+  document.querySelectorAll(".card").forEach((c) => c.onclick = () => select(c.dataset.id));
+}
+
+async function select(id) {
+  state.selected = id; state.tab = state.tab || "rec";
+  history.replaceState(null, "", `#${id}`);
+  document.querySelectorAll(".card").forEach((c) => c.classList.toggle("active", c.dataset.id === id));
+  await loadBid();
+  if (window.innerWidth < 900) $("#detail").scrollIntoView({ behavior: "smooth" });
+}
+
+async function loadBid() {
+  if (!state.selected) return renderWelcome();
+  try { state.bid = await api(`/api/bids/${state.selected}`); } catch (e) { $("#detail").innerHTML = `<div class="err-box">${esc(e.message)}</div>`; return; }
+  renderBid();
+}
+
+/* ---------- detail ---------- */
+function renderWelcome() {
+  $("#detail").innerHTML = `<div class="welcome">
+    <div class="pill" style="margin-bottom:14px">For estimators at commercial electrical contractors</div>
+    <h1>Every bid invite triaged, estimated and routed before you open it.</h1>
+    <p>GCs send more invitations than an estimating team can read. BidDesk's three agents extract the scope, build a budget number from the company price book, and check it against go/no-go criteria. A separate automation then prioritizes, assigns and schedules the human review. Nothing goes back to a GC without an estimator's approval.</p>
+    <div class="flow">
+      <div><b>1 · Intake agent</b>Extracts scope with source quotes, checks distance, crew capacity, GC history</div>
+      <div><b>2 · Estimator agent</b>Maps scope to price book; code does all math</div>
+      <div><b>3 · Reviewer agent</b>Go / no-go against criteria, drafts GC reply</div>
+      <div><b>4 · Automation</b>Priority → route → review deadline → notify; hourly overdue sweep</div>
+      <div><b>5 · Human</b>Estimator approves, overrides or asks the GC</div>
+    </div>
+    <button class="btn primary" onclick="openModal()">Analyze a bid request</button>
+  </div>`;
+}
+
+function stepClass(bid, idx) {
+  const order = ["intake", "estimating", "reviewing", "analyzed", "awaiting_review"];
+  if (bid.status === "error") {
+    const done = [!!bid.intake, !!bid.estimate, !!bid.review, false, false];
+    if (done[idx]) return "done";
+    return done.indexOf(false) === idx ? "err" : "";
+  }
+  if (["approved", "declined", "info_requested"].includes(bid.status)) return "done";
+  const cur = bid.status === "received" ? 0 : order.indexOf(bid.status);
+  if (idx < cur) return "done";
+  if (idx === cur) return bid.status === "awaiting_review" ? "now" : "now";
+  return "";
+}
+
+function renderBid() {
+  const b = state.bid, i = b.intake || {}, e = b.estimate, r = b.review, rt = b.routing;
+  const working = WORKING.includes(b.status);
+  const steps = [
+    ["Intake agent", i.project_name ? `${(i.scope_items || []).length} scope items` : "Reading request"],
+    ["Estimator agent", e ? usd(e.totals.total) : "Pricing scope"],
+    ["Reviewer agent", r ? DLABEL[r.decision] : "Checking criteria"],
+    ["Automation", rt ? `${rt.priority} · ${rt.assignee}` : "Route + schedule"],
+    ["Human review", b.decision ? HLABEL[b.decision.action] : rt ? `Due ${when(rt.reviewDueAt)}` : "Waiting"],
+  ];
+  const head = `<div class="d-head">
+      <div><h1>${esc(i.project_name || b.source.subject)}</h1>
+      <div class="d-sub">${esc([i.gc_name || b.source.from, [i.location_town, i.location_state].filter(Boolean).join(", "), i.bid_due_date ? `Bid due ${i.bid_due_date}` : null].filter(Boolean).join(" · "))}</div></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${rt ? `<span class="pill ${rt.priority}">${rt.priority}</span>` : ""}${rt?.overdue && !b.decision ? `<span class="pill overdue">Overdue</span>` : ""}${working ? `<span class="pill working">${esc(SLABEL[b.status])}</span>` : ""}</div>
+    </div>
+    <div class="steps">${steps.map((s, k) => `<div class="step ${stepClass(b, k)}"><b>${s[0]}</b>${esc(s[1])}</div>`).join("")}</div>
+    ${b.error ? `<div class="err-box"><b>Pipeline error:</b> ${esc(b.error)}</div>` : ""}`;
+
+  let summary = "";
+  if (r && e) {
+    summary = `<div class="grid">
+      <div class="box">
+        <h3>Agent recommendation</h3>
+        <div class="verdict"><span class="big ${r.decision}">${DLABEL[r.decision]}</span><span class="score">fit <b>${r.fit_score}</b>/100</span></div>
+        <div class="headline">${esc(r.headline)}</div>
+        <div style="color:var(--ink-2);font-size:14.5px">${esc(r.rationale)}</div>
+      </div>
+      <div class="box">
+        <h3>Preliminary estimate</h3>
+        <div class="total">${usd(e.totals.total)}</div>
+        <div class="d-sub" style="margin-bottom:10px">Budgetary · confidence <b>${esc(e.confidence)}</b></div>
+        <dl class="kv"><dt>Labor</dt><dd class="money">${Math.round(e.totals.labor_hours).toLocaleString()} hrs</dd><dt>Material</dt><dd class="money">${usd(e.totals.material)}</dd><dt>Distance</dt><dd>${i.travel_miles != null ? `${i.travel_miles} mi from Hopkinton` : "Unknown"}</dd><dt>Crew open</dt><dd>${i.crew_capacity_open_pct != null ? i.crew_capacity_open_pct + "%" : "Unknown"}</dd><dt>GC</dt><dd>${esc(i.gc_status || "")}${i.gc_note ? " · " + esc(i.gc_note) : ""}</dd></dl>
+      </div>
+    </div>`;
+  }
+
+  let decide = "";
+  if (b.status === "awaiting_review" || b.decision) {
+    if (b.decision) {
+      decide = `<div class="decide decided"><b>${esc(HLABEL[b.decision.action])}</b> by ${esc(b.decision.by)} · ${when(b.decision.at)}${b.decision.note ? `<div style="margin-top:6px">${esc(b.decision.note)}</div>` : ""}
+        <div class="row"><button class="btn" onclick="state.tab='reply';renderBid()">View GC reply draft</button><button class="btn" onclick="reopen()">Change decision</button></div></div>`;
+    } else {
+      decide = `<div class="decide"><b>Your call.</b> <span class="d-sub">The agents recommend <b>${esc(DLABEL[r.decision])}</b>. Review the flags below, then decide. Nothing is sent to the GC automatically.</span>
+        ${r.human_review_flags?.length ? `<ul class="clean" style="margin-top:8px">${r.human_review_flags.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}
+        <textarea id="dNote" placeholder="Note for the record (optional)"></textarea>
+        <div class="row"><button class="btn go" onclick="decide('approved')">Approve · pursue bid</button><button class="btn ask" onclick="decide('info_requested')">Request info from GC</button><button class="btn no" onclick="decide('declined')">Decline bid</button></div></div>`;
+    }
+  }
+
+  const tabs = [["rec", "Criteria & risks"], ["est", "Estimate"], ["scope", "Scope"], ["trace", `Agent trace (${b.trace.length})`], ["auto", `Automation (${b.automation.length})`], ["reply", "GC reply draft"], ["src", "Original request"]];
+  const tabBar = `<div class="tabs">${tabs.map(([k, l]) => `<button class="tab ${state.tab === k ? "on" : ""}" onclick="state.tab='${k}';renderBid()">${esc(l)}</button>`).join("")}</div>`;
+
+  $("#detail").innerHTML = head + summary + decide + tabBar + `<div id="tabBody">${renderTab(b)}</div>
+    <div class="foot-note">Demo data: price book, bid criteria, crew schedule and GC history are illustrative samples, not CEC's real figures. ${b.model ? `Model: ${esc(b.model)} via Netlify AI Gateway.` : ""}</div>`;
+}
+
+function renderTab(b) {
+  const i = b.intake, e = b.estimate, r = b.review;
+  const wait = (what) => `<div class="empty">${b.status === "error" ? "Pipeline stopped before this step." : `Waiting for the ${what}…`}</div>`;
+  switch (state.tab) {
+    case "rec":
+      if (!r) return wait("Reviewer agent");
+      return `<div class="grid"><div class="box"><h3>Criteria checks</h3><div class="checks">${r.criteria_checks.map((c) => `<div class="check"><span class="res ${c.result}">${c.result}</span><div><b>${esc(c.criterion)}</b><div style="color:var(--ink-2)">${esc(c.note)}</div></div></div>`).join("")}</div></div>
+        <div style="display:grid;gap:16px;align-content:start">
+          <div class="box"><h3>Risks</h3>${r.risks.length ? `<ul class="clean">${r.risks.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "None flagged."}</div>
+          <div class="box"><h3>Questions for the GC</h3>${r.questions_for_gc.length ? `<ul class="clean">${r.questions_for_gc.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "None."}</div>
+        </div></div>`;
+    case "est":
+      if (!e) return wait("Estimator agent");
+      return `<div class="box" style="overflow-x:auto"><h3>Line items · priced from price book by code (labor ${usd(e.totals.labor_rate)}/hr)</h3>
+        <table><thead><tr><th>Code</th><th>Item</th><th class="n">Qty</th><th class="n">Material</th><th class="n">Labor hrs</th><th class="n">Total</th></tr></thead><tbody>
+        ${e.lines.map((l) => `<tr><td class="mono">${esc(l.item_code)}</td><td>${esc(l.description)}${l.note ? `<div class="quote">${esc(l.note)}</div>` : ""}</td><td class="n">${l.quantity} ${esc(l.unit)}</td><td class="n">${usd(l.material)}</td><td class="n">${l.labor_hours}</td><td class="n">${usd(l.line_total)}</td></tr>`).join("")}
+        ${e.allowances.map((a) => `<tr><td class="mono">ALLOW</td><td>${esc(a.description)}<div class="quote">${esc(a.reason)}</div></td><td class="n">1</td><td class="n">—</td><td class="n">—</td><td class="n">${usd(a.amount)}</td></tr>`).join("")}
+        <tr><td></td><td>Direct cost</td><td></td><td></td><td></td><td class="n">${usd2(e.totals.direct)}</td></tr>
+        <tr><td></td><td>Overhead (${Math.round(e.totals.overhead_pct * 100)}%)</td><td></td><td></td><td></td><td class="n">${usd2(e.totals.overhead)}</td></tr>
+        <tr><td></td><td>Profit (${Math.round(e.totals.profit_pct * 100)}%)</td><td></td><td></td><td></td><td class="n">${usd2(e.totals.profit)}</td></tr>
+        <tr class="tot-row"><td></td><td>Budgetary total</td><td></td><td></td><td class="n">${e.totals.labor_hours}</td><td class="n">${usd2(e.totals.total)}</td></tr>
+        </tbody></table>
+        <h3 style="margin-top:18px">Assumptions</h3><ul class="clean">${e.assumptions.map((a) => `<li>${esc(a)}</li>`).join("")}</ul>
+        <h3 style="margin-top:18px">Confidence: ${esc(e.confidence)}</h3><div>${esc(e.confidence_reason)}</div></div>`;
+    case "scope":
+      if (!i) return wait("Intake agent");
+      return `<div class="box" style="overflow-x:auto"><h3>Extracted scope · each item checked against the original text</h3>
+        <p style="margin-top:0">${esc(i.scope_summary)}</p>
+        <table><thead><tr><th></th><th>Item</th><th class="n">Qty</th><th>Source quote</th></tr></thead><tbody>
+        ${(i.scope_items || []).map((s) => `<tr><td>${s.verified ? '<span class="verified" title="Quote found in request">✓</span>' : '<span class="unverified" title="Quote not found in request">!</span>'}</td><td>${esc(s.description)}</td><td class="n">${s.quantity ?? "?"} ${esc(s.unit || "")}</td><td class="quote">“${esc(s.source_quote)}”</td></tr>`).join("")}
+        </tbody></table>
+        ${i.missing_info?.length ? `<h3 style="margin-top:18px">Missing information</h3><ul class="clean">${i.missing_info.map((m) => `<li>${esc(m)}</li>`).join("")}</ul>` : ""}
+        ${i.exclusions?.length ? `<h3 style="margin-top:18px">Exclusions</h3><ul class="clean">${i.exclusions.map((m) => `<li>${esc(m)}</li>`).join("")}</ul>` : ""}</div>`;
+    case "trace":
+      if (!b.trace.length) return wait("agents");
+      return `<div class="trace">${b.trace.map((t) => {
+        const label = t.kind === "tool_call" ? `called <code>${esc(t.tool)}</code> <code>${esc(JSON.stringify(t.input)).slice(0, 160)}</code>`
+          : t.kind === "tool_result" ? `<code>${esc(t.tool)}</code> returned <details><summary>view result</summary><pre>${esc(JSON.stringify(t.output, null, 2))}</pre></details>`
+          : t.kind === "final" ? `submitted <code>${esc(t.tool)}</code> <details><summary>view payload</summary><pre>${esc(JSON.stringify(t.input, null, 2))}</pre></details>`
+          : t.kind === "error" ? esc(t.text) : `<span style="color:var(--ink-2)">${esc(t.text)}</span>`;
+        return `<div class="tr ${t.kind}"><div class="who">${esc(t.agent)}<small>${new Date(t.at).toLocaleTimeString()}</small></div><div>${label}</div></div>`;
+      }).join("")}</div>`;
+    case "auto":
+      if (!b.automation.length) return wait("automation");
+      return `<div class="box"><h3>Workflow: bid.analyzed → score → route → schedule → notify</h3>${b.automation.map((a) => `<div class="auto"><b>${esc(a.step)}</b><span>${esc(a.detail)}</span><br/><time>${when(a.at)}</time></div>`).join("")}</div>`;
+    case "reply":
+      if (!r) return wait("Reviewer agent");
+      return `<div class="box"><h3>Draft reply to ${esc(i?.gc_contact || i?.gc_name || "GC")} · not sent</h3><div class="email" id="replyText">${esc(r.gc_reply_draft)}</div>
+        <div class="row" style="margin-top:10px"><button class="btn" onclick="copyReply()">Copy</button></div></div>`;
+    case "src":
+      return `<div class="box"><h3>From ${esc(b.source.from)} · ${esc(b.source.subject)}</h3><div class="email">${esc(b.source.body)}</div></div>`;
+  }
+  return "";
+}
+
+window.copyReply = async () => { try { await navigator.clipboard.writeText(state.bid.review.gc_reply_draft); toast("Copied"); } catch { toast("Copy failed"); } };
+window.decide = async (action) => {
+  const note = $("#dNote")?.value || "";
+  try { state.bid = await api(`/api/bids/${state.selected}/decision`, { method: "POST", body: JSON.stringify({ action, note, by: "Estimator" }) }); renderBid(); loadQueue(); toast("Decision recorded"); }
+  catch (e) { toast(e.message); }
+};
+window.reopen = () => { const b = state.bid; b._d = b.decision; b.decision = null; b.status = "awaiting_review"; renderBid(); };
+
+/* ---------- new request ---------- */
+window.openModal = () => { $("#modal").classList.add("open"); $("#scrim").classList.add("open"); $("#fErr").hidden = true; setTimeout(() => $("#fBody").focus(), 50); };
+function closeAll() { ["#modal", "#scrim", "#drawer"].forEach((s) => $(s).classList.remove("open")); }
+$("#newBtn").onclick = openModal; $("#cancelBtn").onclick = closeAll; $("#scrim").onclick = closeAll; $("#closeDrawer").onclick = closeAll;
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAll(); });
+$("#samples").innerHTML = "<span class='d-sub' style='align-self:center'>Try a sample:</span>" + window.BIDDESK_SAMPLES.map((s, k) => `<button data-k="${k}">${esc(s.label)}</button>`).join("");
+$("#samples").querySelectorAll("button").forEach((b) => b.onclick = () => { const s = window.BIDDESK_SAMPLES[b.dataset.k]; $("#fFrom").value = s.from; $("#fSubj").value = s.subject; $("#fBody").value = s.body; });
+$("#submitBtn").onclick = async () => {
+  const btn = $("#submitBtn"); btn.disabled = true; btn.textContent = "Submitting…";
+  try {
+    const { id } = await api("/api/submit", { method: "POST", body: JSON.stringify({ from: $("#fFrom").value, subject: $("#fSubj").value, body: $("#fBody").value }) });
+    closeAll(); ["#fFrom", "#fSubj", "#fBody"].forEach((s) => $(s).value = "");
+    state.tab = "trace"; await loadQueue(); await select(id); toast("Agents are working on it");
+  } catch (e) { $("#fErr").textContent = e.message; $("#fErr").hidden = false; }
+  finally { btn.disabled = false; btn.textContent = "Analyze request"; }
+};
+
+/* ---------- notifications ---------- */
+async function loadNotes() {
+  try {
+    const list = await api("/api/notifications");
+    const unread = list.filter((n) => !n.read).length;
+    $("#bellDot").hidden = !unread; $("#bellDot").textContent = unread;
+    $("#notes").innerHTML = list.length ? list.map((n) => `<div class="note ${n.read ? "" : "unread"} ${n.level}" data-id="${esc(n.bidId)}"><div class="nt">${esc(n.title)}</div><div class="nb">${esc(n.body)}</div><time>${when(n.at)}</time></div>`).join("") : `<div class="empty">No notifications yet.</div>`;
+    $("#notes").querySelectorAll(".note").forEach((el) => el.onclick = () => { closeAll(); state.tab = "rec"; select(el.dataset.id); });
+  } catch {}
+}
+$("#bellBtn").onclick = async () => { $("#drawer").classList.add("open"); $("#scrim").classList.add("open"); await api("/api/notifications", { method: "POST" }).catch(() => {}); setTimeout(loadNotes, 400); };
+
+/* ---------- polling ---------- */
+async function tick() {
+  await loadQueue();
+  if (state.selected && state.bid && (WORKING.includes(state.bid.status) || (state.bid.status === "awaiting_review" && !state.bid.automation.length))) await loadBid();
+  loadNotes();
+}
+(async () => {
+  await loadQueue();
+  const hash = location.hash.slice(1);
+  if (hash) { state.tab = "rec"; await select(hash); } else renderWelcome();
+  loadNotes();
+  setInterval(tick, 2500);
+})();
+</script>
+</body>
+</html>
