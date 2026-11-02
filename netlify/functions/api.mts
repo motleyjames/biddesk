@@ -16,6 +16,8 @@ export default async (req: Request, context: Context) => {
         project: b.intake?.project_name ?? null, gc: b.intake?.gc_name ?? null, town: b.intake?.location_town ?? null,
         decision: b.review?.decision ?? null, fitScore: b.review?.fit_score ?? null, total: b.estimate?.totals?.total ?? null,
         priority: b.routing?.priority ?? null, overdue: b.routing?.overdue ?? false, humanDecision: b.decision?.action ?? null,
+        bidDue: b.intake?.bid_due_date ?? null, reviewDueAt: b.routing?.reviewDueAt ?? null, assignee: b.routing?.assignee ?? null,
+        channel: (b.source as any).channel ?? "email",
       })));
     }
 

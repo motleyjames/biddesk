@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CEC Bid Portal</title>
+<meta name="description" content="Demo bid portal where general contractors invite CEC to bid." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231B2430'/><path d='M6 16h6l3-7 4 14 3-7h4' fill='none' stroke='%23B87333' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/styles.css" />
+<style>
+  .demo { background: var(--warn-soft); color: var(--warn); text-align: center; font-size: 13.5px; padding: 8px 16px; }
+  .portal { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+  .intro h1 { font-size: 36px; line-height: 1.1; font-weight: 800; font-stretch: 112%; letter-spacing: -0.02em; margin: 0 0 10px; max-width: 20ch; }
+  .intro p { color: var(--ink-2); font-size: 16.5px; max-width: 62ch; margin: 0; }
+  .card { margin-top: 28px; background: var(--sheet); border: 1px solid var(--line); border-radius: var(--r); padding: 28px; }
+  fieldset { border: 0; padding: 0; margin: 0 0 8px; }
+  legend { float: left; width: 100%; font-size: 16px; font-weight: 700; padding: 0; margin-bottom: 2px; }
+  legend + * { clear: both; }
+  fieldset + fieldset { border-top: 1px solid var(--line); padding-top: 22px; margin-top: 22px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  .cols3 { display: grid; grid-template-columns: 2fr 1fr 80px; gap: 0 16px; }
+  .help { font-size: 13px; color: var(--steel); margin-top: 4px; }
+  .req::after { content: " *"; color: var(--no); }
+  .actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+  .done { text-align: left; }
+  .done h2 { font-size: 26px; font-weight: 800; font-stretch: 110%; margin: 0 0 8px; }
+  .ref { display: inline-block; margin: 6px 0 16px; padding: 6px 12px; border-radius: var(--r); background: var(--paper); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+  @media (max-width: 640px) { .cols, .cols3 { grid-template-columns: 1fr; } .card { padding: 20px; } }
+</style>
+</head>
+<body>
+<div class="demo">Demo portal for a class project. Submissions go to the BidDesk demo, not to Custom Electric &amp; Communications.</div>
+<header class="bar">
+  <a class="brand" href="/portal.html">
+    <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="6" fill="#2A3644"/><path d="M6 16h6l3-7 4 14 3-7h4" fill="none" stroke="#B87333" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    CEC Bid Portal
+  </a>
+  <div class="spacer"></div>
+  <a class="btn" href="/">Estimating desk</a>
+</header>
+
+<main class="portal">
+  <div class="intro" id="intro">
+    <h1>Invite Custom Electric &amp; Communications to bid</h1>
+    <p>Send us your electrical package and we’ll confirm within one business day whether we’re bidding, along with any questions about scope.</p>
+  </div>
+
+  <form class="card" id="form" novalidate>
+    <fieldset>
+      <legend>Your company</legend>
+      <div class="cols">
+        <div><label class="req" for="company">General contractor</label><input id="company" name="company" autocomplete="organization" required /></div>
+        <div><label for="contact">Your name</label><input id="contact" name="contact" autocomplete="name" /></div>
+      </div>
+      <label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" />
+    </fieldset>
+    <fieldset>
+      <legend>The project</legend>
+      <label class="req" for="project">Project name</label><input id="project" name="project" required />
+      <div class="cols3">
+        <div><label for="address">Street address</label><input id="address" name="address" /></div>
+        <div><label class="req" for="town">Town</label><input id="town" name="town" required /></div>
+        <div><label for="state">State</label><input id="state" name="state" maxlength="2" value="MA" /></div>
+      </div>
+      <div class="cols">
+        <div><label for="due">Bids due</label><input id="due" name="due" type="date" /></div>
+        <div><label for="start">Anticipated start</label><input id="start" name="start" type="month" /></div>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Electrical scope</legend>
+      <label class="req" for="scope">What’s included</label>
+      <textarea id="scope" name="scope" required placeholder="List fixtures, devices, panels, data, fire alarm and anything else in the electrical package, with quantities where you have them."></textarea>
+      <div class="help">Quantities help us give a faster, firmer answer. Leave anything you don’t know blank.</div>
+      <label for="notes">Anything else</label><input id="notes" name="notes" placeholder="Drawing set link, prevailing wage, phasing, site access" />
+    </fieldset>
+    <div class="err" id="err" hidden></div>
+    <div class="actions">
+      <button type="button" class="btn" id="example">Fill with an example project</button>
+      <button type="submit" class="btn dark" id="send">Send bid invitation</button>
+    </div>
+  </form>
+
+  <div class="card done" id="done" hidden>
+    <h2>Invitation received</h2>
+    <p>Thanks. CEC’s estimating team has it, and you’ll hear back within one business day.</p>
+    <div>Reference <span class="ref" id="ref"></span></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <a class="btn dark" id="openDesk" href="/">See it on the estimating desk</a>
+      <button class="btn" id="another">Send another</button>
+    </div>
+  </div>
+</main>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const example = {
+  company: "Metrowest Builders Group", contact: "Dana Whitfield", email: "dwhitfield@metrowestbuilders.example",
+  project: "Natick Pediatrics clinic fit-out", address: "209 W Central St", town: "Natick", state: "MA",
+  due: (() => { const d = new Date(); d.setDate(d.getDate() + 16); return d.toISOString().slice(0, 10); })(),
+  start: "2027-02",
+  scope: "Approx 7,500 sq ft first-floor pediatric clinic in an existing office building.\n- (90) 2x4 LED troffers and (36) 6\" LED downlights\n- (10) exit/emergency combo units\n- (110) 20A duplex receptacles and (24) GFCI receptacles\n- (40) single-pole switches and (22) occupancy sensor switches\n- (1) new 225A 42-circuit panelboard fed from the existing switchboard\n- (48) Cat6 data drops\n- Fire alarm: (30) devices tied into the existing building panel\n- (3) RTU connections\n- Demo of (60) existing light fixtures",
+  notes: "Drawings E-001 to E-301 available on request. No prevailing wage.",
+};
+$("#example").onclick = () => { for (const [k, v] of Object.entries(example)) $("#" + k).value = v; };
+$("#another").onclick = () => { $("#form").reset(); $("#done").hidden = true; $("#form").hidden = false; $("#intro").hidden = false; };
+$("#form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(e.target).entries());
+  const missing = ["company", "project", "town", "scope"].filter((k) => !String(data[k] || "").trim());
+  if (missing.length) { $("#err").textContent = "Fill in the general contractor, project name, town and electrical scope."; $("#err").hidden = false; $("#" + missing[0]).focus(); return; }
+  const btn = $("#send"); btn.disabled = true; btn.textContent = "Sending…"; $("#err").hidden = true;
+  try {
+    const r = await fetch("/api/submit", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ channel: "portal", ...data }) });
+    const out = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(out.error || `Couldn’t send (${r.status}). Try again in a minute.`);
+    $("#ref").textContent = out.reference; $("#openDesk").href = "/#" + out.id;
+    $("#form").hidden = true; $("#intro").hidden = true; $("#done").hidden = false; scrollTo(0, 0);
+  } catch (err) { $("#err").textContent = err.message; $("#err").hidden = false; }
+  finally { btn.disabled = false; btn.textContent = "Send bid invitation"; }
+});
+</script>
+</body>
+</html>
