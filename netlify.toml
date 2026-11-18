@@ -5,3 +5,16 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
+
+# Security headers for every page. The Content-Security-Policy only allows scripts that are
+# files on this site, so even if text from a bid slipped into the page unescaped, the browser
+# would refuse to run it. (Function responses set their own headers in code.)
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Strict-Transport-Security = "max-age=31536000"

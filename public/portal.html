@@ -27,6 +27,8 @@
   .actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
   .done { text-align: left; }
   .done h2 { font-size: 26px; font-weight: 800; font-stretch: 110%; margin: 0 0 8px; }
+  .row-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .trap { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
   .ref { display: inline-block; margin: 6px 0 16px; padding: 6px 12px; border-radius: var(--r); background: var(--paper); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .04em; }
   @media (max-width: 640px) { .cols, .cols3 { grid-template-columns: 1fr; } .card { padding: 20px; } }
 </style>
@@ -77,6 +79,7 @@
       <div class="help">Quantities help us give a faster, firmer answer. Leave anything you don’t know blank.</div>
       <label for="notes">Anything else</label><input id="notes" name="notes" placeholder="Drawing set link, prevailing wage, phasing, site access" />
     </fieldset>
+    <div class="trap" aria-hidden="true"><label for="website">Leave this empty</label><input id="website" name="website" tabindex="-1" autocomplete="off" /></div>
     <div class="err" id="err" hidden></div>
     <div class="actions">
       <button type="button" class="btn" id="example">Fill with an example project</button>
@@ -88,40 +91,13 @@
     <h2>Invitation received</h2>
     <p>Thanks. CEC’s estimating team has it, and you’ll hear back within one business day.</p>
     <div>Reference <span class="ref" id="ref"></span></div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <div class="row-actions">
       <a class="btn dark" id="openDesk" href="/">See it on the estimating desk</a>
       <button class="btn" id="another">Send another</button>
     </div>
   </div>
 </main>
 
-<script>
-const $ = (s) => document.querySelector(s);
-const example = {
-  company: "Metrowest Builders Group", contact: "Dana Whitfield", email: "dwhitfield@metrowestbuilders.example",
-  project: "Natick Pediatrics clinic fit-out", address: "209 W Central St", town: "Natick", state: "MA",
-  due: (() => { const d = new Date(); d.setDate(d.getDate() + 16); return d.toISOString().slice(0, 10); })(),
-  start: "2027-02",
-  scope: "Approx 7,500 sq ft first-floor pediatric clinic in an existing office building.\n- (90) 2x4 LED troffers and (36) 6\" LED downlights\n- (10) exit/emergency combo units\n- (110) 20A duplex receptacles and (24) GFCI receptacles\n- (40) single-pole switches and (22) occupancy sensor switches\n- (1) new 225A 42-circuit panelboard fed from the existing switchboard\n- (48) Cat6 data drops\n- Fire alarm: (30) devices tied into the existing building panel\n- (3) RTU connections\n- Demo of (60) existing light fixtures",
-  notes: "Drawings E-001 to E-301 available on request. No prevailing wage.",
-};
-$("#example").onclick = () => { for (const [k, v] of Object.entries(example)) $("#" + k).value = v; };
-$("#another").onclick = () => { $("#form").reset(); $("#done").hidden = true; $("#form").hidden = false; $("#intro").hidden = false; };
-$("#form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const data = Object.fromEntries(new FormData(e.target).entries());
-  const missing = ["company", "project", "town", "scope"].filter((k) => !String(data[k] || "").trim());
-  if (missing.length) { $("#err").textContent = "Fill in the general contractor, project name, town and electrical scope."; $("#err").hidden = false; $("#" + missing[0]).focus(); return; }
-  const btn = $("#send"); btn.disabled = true; btn.textContent = "Sending…"; $("#err").hidden = true;
-  try {
-    const r = await fetch("/api/submit", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ channel: "portal", ...data }) });
-    const out = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(out.error || `Couldn’t send (${r.status}). Try again in a minute.`);
-    $("#ref").textContent = out.reference; $("#openDesk").href = "/#" + out.id;
-    $("#form").hidden = true; $("#intro").hidden = true; $("#done").hidden = false; scrollTo(0, 0);
-  } catch (err) { $("#err").textContent = err.message; $("#err").hidden = false; }
-  finally { btn.disabled = false; btn.textContent = "Send bid invitation"; }
-});
-</script>
+<script src="/portal.js"></script>
 </body>
 </html>

@@ -1,7 +1,8 @@
-import { getBid, saveBid, notify, now, type Bid } from "./store.mts";
+import { getBidRecord, saveBid, notify, now, type Bid } from "./store.mts";
 
 // Deterministic workflow, separate from the agents. Triggered by the "bid.analyzed" event.
 // No LLM calls here: routing and deadlines must be predictable and auditable.
+// It routes on review.decision, which code has already checked against the hard rules (rules.mts). (#7)
 
 const HOUR = 3600_000;
 
@@ -23,12 +24,12 @@ function businessDaysUntil(date: string | null | undefined): number | null {
   if (isNaN(end.getTime())) return null;
   const d = new Date(); d.setUTCHours(12, 0, 0, 0);
   let n = 0;
-  while (d < end) { d.setUTCDate(d.getUTCDate() + 1); const w = d.getUTCDay(); if (w !== 0 && w !== 6) n++; }
+  for (let i = 0; d < end && i < 800; i++) { d.setUTCDate(d.getUTCDate() + 1); const w = d.getUTCDay(); if (w !== 0 && w !== 6) n++; }
   return n;
 }
 
 export async function runIntakeAutomation(bidId: string): Promise<Bid | null> {
-  const bid = await getBid(bidId);
+  const bid = await getBidRecord(bidId);
   if (!bid || bid.status !== "analyzed") return bid; // idempotent: only runs once per analysis
   const log = (step: string, detail: string) => bid.automation.push({ step, detail, at: now() });
 
@@ -46,6 +47,8 @@ export async function runIntakeAutomation(bidId: string): Promise<Bid | null> {
     priority = daysLeft !== null && daysLeft <= 5 ? "P1" : "P2";
     reason = `Questions must go to the GC${daysLeft !== null ? ` (bid due in ${daysLeft} business days)` : ""}.`;
   }
+  if (bid.review?.override) reason += ` ${bid.review.override}`;
+  if (bid.security?.suspected && priority === "P3") { priority = "P2"; reason += " Raised to P2: possible prompt injection to check."; }
   log("1. Score priority", `${priority}: ${reason}`);
 
   // Step 2: route to the right reviewer

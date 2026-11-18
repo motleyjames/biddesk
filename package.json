@@ -5,6 +5,7 @@
   "type": "module",
   "description": "BidDesk: AI bid-request triage for an electrical contractor",
   "scripts": {
+    "test": "node --test tests/*.test.mts",
     "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {
@@ -15,5 +16,8 @@
   "devDependencies": {
     "typescript": "^7.0.2",
     "@types/node": "^26.6.6"
+  },
+  "engines": {
+    "node": ">=22.18"
   }
 }

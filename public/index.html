@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/styles.css" />
 </head>
-<body>
+<body class="signed-out">
 <header class="bar">
   <a class="brand" href="/" aria-label="BidDesk home">
     <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="6" fill="#2A3644"/><path d="M6 16h6l3-7 4 14 3-7h4" fill="none" stroke="#B87333" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -28,6 +28,7 @@
     <span class="dot" id="bellDot" hidden>0</span>
   </button>
   <button class="btn" id="logBtn">Log a bid email</button>
+  <div class="who" id="who" hidden><span id="whoName"></span><button class="linkbtn" id="signOut">Sign out</button></div>
 </header>
 
 <div class="shell">

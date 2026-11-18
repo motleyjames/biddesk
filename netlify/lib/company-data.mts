@@ -102,13 +102,26 @@ export const CREW_CAPACITY: Record<string, { openPct: number; note: string }> = 
   "2027-06": { openPct: 40, note: "Good availability." },
 };
 
-// GC relationship history (fictional companies).
-export const GC_HISTORY: Record<string, { status: "preferred" | "good" | "caution" | "new"; jobs: number; wins: number; note: string }> = {
-  "metrowest builders group": { status: "preferred", jobs: 9, wins: 5, note: "Pays in 30 days, fair change-order process." },
-  "harborline builders": { status: "good", jobs: 4, wins: 1, note: "Bids are price-driven; tight margins." },
-  "granite state construction": { status: "good", jobs: 3, wins: 2, note: "Mostly NH work." },
-  "bayside contracting": { status: "caution", jobs: 2, wins: 1, note: "Paid 95 days late on last job; retainage dispute in 2025." },
-  "northfield school building authority": { status: "preferred", jobs: 3, wins: 2, note: "Public owner; prevailing wage; reliable payment." },
+// GC relationship history (fictional companies). Keys are normalized names (see normalizeCompany).
+// `domains` are the email domains that GC actually sends from; history only applies when the
+// sender's address matches, so a stranger can't claim a preferred GC's name to get its status.
+export type GcRecord = { status: "preferred" | "good" | "caution"; jobs: number; wins: number; note: string; domains: string[] };
+export const GC_HISTORY: Record<string, GcRecord> = {
+  "metrowest builders group": { status: "preferred", jobs: 9, wins: 5, note: "Pays in 30 days, fair change-order process.", domains: ["metrowestbuilders.example"] },
+  "harborline builders": { status: "good", jobs: 4, wins: 1, note: "Bids are price-driven; tight margins.", domains: ["harborline.example"] },
+  "granite state construction": { status: "good", jobs: 3, wins: 2, note: "Mostly NH work.", domains: ["granitestate.example"] },
+  "bayside contracting": { status: "caution", jobs: 2, wins: 1, note: "Paid 95 days late on last job; retainage dispute in 2025.", domains: ["bayside.example"] },
+  "northfield school building authority": { status: "preferred", jobs: 3, wins: 2, note: "Public owner; prevailing wage; reliable payment.", domains: ["northfieldsba.example"] },
+};
+
+// The hard bid rules as numbers, enforced in code (rules.mts). BID_CRITERIA above is the same
+// policy written out for the Reviewer agent; keep the two in sync.
+export const HARD_LIMITS = {
+  maxMiles: 60,
+  minJobValue: 25_000,
+  maxJobValue: 2_500_000,
+  bondingCapacity: 3_000_000,
+  declinedProjectTypes: ["residential", "utility_high_voltage", "solar"] as string[],
 };
 
 export const PAST_JOBS = [
