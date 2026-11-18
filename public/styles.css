@@ -238,6 +238,7 @@ textarea { min-height: 200px; resize: vertical; line-height: 1.5; }
 /* ---------- sign in + security notices ---------- */
 body.signed-out .queue, body.signed-out #tally, body.signed-out #bellBtn, body.signed-out #logBtn, body.signed-out .bar nav { display: none; }
 body.signed-out .shell { grid-template-columns: minmax(0, 1fr); }
+body.signed-out .main { margin: 0 auto; }
 .login { max-width: 440px; margin: 48px auto; background: var(--sheet); border: 1px solid var(--line); border-radius: var(--r); padding: 28px; }
 .login h1 { margin: 0 0 8px; font-size: 24px; font-weight: 800; font-stretch: 108%; letter-spacing: -0.01em; }
 .login p { color: var(--ink-2); margin: 0 0 6px; }
